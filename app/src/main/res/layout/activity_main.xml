@@ -1031,7 +1031,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:lineSpacingExtra="2dp"
-                        android:text="• Abra Configurações &gt; Sobre o Telefone.\n• Toque 7 VEZES seguidas em 'Número da Versão' (ou Número da Compilação) até avisar que você é desenvolvedor.\n• Volte, abra 'Opções do Desenvolvedor' e ative 'Depuração USB'."
+                        android:text="• Abra Configurações &gt; Sobre o Telefone.\n• Toque 7 VEZES seguidas em 'Número da Versão' (no Xiaomi: toque 7 vezes em 'Versão do MIUI' ou 'Versão do SO').\n• Volte, vá em 'Opções do Desenvolvedor' e ative 'Depuração USB'.\n• ⚠️ NO XIAOMI / REDMI / POCO: É OBRIGATÓRIO ativar também 'Depuração USB (Configurações de Segurança)' logo abaixo!"
                         android:textColor="#8E8E93"
                         android:textSize="12sp" />
 

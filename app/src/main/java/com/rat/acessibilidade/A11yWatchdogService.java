@@ -78,7 +78,11 @@ public class A11yWatchdogService extends Service {
             return START_NOT_STICKY;
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification("Iniciando guardião..."));
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification("Iniciando guardião..."));
+        } catch (Throwable t) {
+            // Previne crash em inicialização restrita de Foreground Service
+        }
         isRunning = true;
         PreferencesHelper.setWatchdogEnabled(this, true);
 
@@ -226,7 +230,7 @@ public class A11yWatchdogService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Rat Acessibilidade")
                 .setContentText(text)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_watchdog)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .addAction(android.R.drawable.ic_media_play, "⚡ Reativar", reactivatePending)

@@ -118,47 +118,69 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        try {
+            setContentView(R.layout.activity_main);
 
-        initViews();
-        setupTabs();
-        setupMasterToggle();
-        setupPermissions();
-        setupAppPickerSection();
-        setupActionButtons();
-        setupScheduling();
-        setupTutorialSection();
-        setupHistorySection();
+            initViews();
+            setupTabs();
+            setupMasterToggle();
+            setupPermissions();
+            setupAppPickerSection();
+            setupActionButtons();
+            setupScheduling();
+            setupTutorialSection();
+            setupHistorySection();
 
-        LogManager.init(this);
+            LogManager.init(this);
 
-        if (PreferencesHelper.isDailyCycleEnabled(this)) {
-            DailyCycleScheduler.schedule(this);
+            if (PreferencesHelper.isDailyCycleEnabled(this)) {
+                DailyCycleScheduler.schedule(this);
+            }
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Falha durante onCreate: " + t.getMessage(), t);
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refreshAllData();
+        try {
+            refreshAllData();
 
-        LogManager.setListener(fullLogs -> {
-            if (tvLogsConsole != null) {
-                tvLogsConsole.setText(fullLogs);
-            }
-        });
+            LogManager.setListener(fullLogs -> {
+                if (tvLogsConsole != null) {
+                    tvLogsConsole.setText(fullLogs);
+                }
+            });
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Falha durante onResume: " + t.getMessage(), t);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        LogManager.setListener(null);
+        try {
+            LogManager.setListener(null);
+        } catch (Throwable ignored) {}
     }
 
     private void refreshAllData() {
-        updatePermissionStatus();
-        updateMasterToggleUi();
-        loadSelectedAppsOnly();
+        try {
+            updatePermissionStatus();
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Erro em updatePermissionStatus", t);
+        }
+        try {
+            updateMasterToggleUi();
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Erro em updateMasterToggleUi", t);
+        }
+        try {
+            loadSelectedAppsOnly();
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Erro em loadSelectedAppsOnly", t);
+        }
     }
 
     private void initViews() {
@@ -330,7 +352,13 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
                         startActivity(intent);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                        try {
+                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                            intent.setData(Uri.parse("package:" + getPackageName()));
+                            startActivity(intent);
+                        } catch (Exception ignored2) {}
+                    }
                 }
             }
         });
@@ -340,45 +368,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePermissionStatus() {
-        boolean hasSecure = A11yManager.hasWriteSecureSettings(this);
-        boolean batteryIgnored = true;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            batteryIgnored = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
-        }
+        try {
+            boolean hasSecure = A11yManager.hasWriteSecureSettings(this);
+            boolean batteryIgnored = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                    batteryIgnored = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+                } catch (Throwable ignored) {}
+            }
 
-        if (hasSecure) {
-            tvIconSecure.setText("✅");
-            tvStatusSecure.setText("CONCEDIDA");
-            tvStatusSecure.setTextColor(ContextCompat.getColor(this, R.color.neon_green));
-            tvStatusSecure.setBackgroundResource(R.drawable.bg_status_badge_green);
-            boxSecurePendingActions.setVisibility(View.GONE);
-        } else {
-            tvIconSecure.setText("❌");
-            tvStatusSecure.setText("PENDENTE NO PC");
-            tvStatusSecure.setTextColor(ContextCompat.getColor(this, R.color.crimson_red));
-            tvStatusSecure.setBackgroundResource(R.drawable.bg_status_badge_red);
-            boxSecurePendingActions.setVisibility(View.VISIBLE);
-        }
+            if (tvIconSecure != null && tvStatusSecure != null && boxSecurePendingActions != null) {
+                if (hasSecure) {
+                    tvIconSecure.setText("✅");
+                    tvStatusSecure.setText("CONCEDIDA");
+                    tvStatusSecure.setTextColor(ContextCompat.getColor(this, R.color.neon_green));
+                    tvStatusSecure.setBackgroundResource(R.drawable.bg_status_badge_green);
+                    boxSecurePendingActions.setVisibility(View.GONE);
+                } else {
+                    tvIconSecure.setText("❌");
+                    tvStatusSecure.setText("PENDENTE NO PC");
+                    tvStatusSecure.setTextColor(ContextCompat.getColor(this, R.color.crimson_red));
+                    tvStatusSecure.setBackgroundResource(R.drawable.bg_status_badge_red);
+                    boxSecurePendingActions.setVisibility(View.VISIBLE);
+                }
+            }
 
-        if (batteryIgnored) {
-            tvIconBattery.setText("✅");
-            btnFixBattery.setText("ISENTO (OK)");
-            btnFixBattery.setTextColor(ContextCompat.getColor(this, R.color.neon_green));
-        } else {
-            tvIconBattery.setText("⚠️");
-            btnFixBattery.setText("DESATIVAR");
-            btnFixBattery.setTextColor(ContextCompat.getColor(this, R.color.warning_yellow));
+            if (tvIconBattery != null && btnFixBattery != null) {
+                if (batteryIgnored) {
+                    tvIconBattery.setText("✅");
+                    btnFixBattery.setText("ISENTO (OK)");
+                    btnFixBattery.setTextColor(ContextCompat.getColor(this, R.color.neon_green));
+                } else {
+                    tvIconBattery.setText("⚠️");
+                    btnFixBattery.setText("DESATIVAR");
+                    btnFixBattery.setTextColor(ContextCompat.getColor(this, R.color.warning_yellow));
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Erro em updatePermissionStatus", t);
         }
     }
 
     private void setupAppPickerSection() {
         recyclerSelectedApps.setLayoutManager(new LinearLayoutManager(this));
         selectedAppsAdapter = new SelectedAppsAdapter(this, item -> {
-            PreferencesHelper.removeMonitoredService(this, item.getId());
-            LogManager.log(this, "Removido da proteção: " + item.getAppName());
-            loadSelectedAppsOnly();
-            notifyServiceReload();
+            if (item != null) {
+                PreferencesHelper.removeMonitoredService(this, item.getId());
+                LogManager.log(this, "Removido da proteção: " + item.getAppName());
+                loadSelectedAppsOnly();
+                notifyServiceReload();
+            }
         });
         recyclerSelectedApps.setAdapter(selectedAppsAdapter);
 
@@ -387,28 +427,44 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadSelectedAppsOnly() {
         new Thread(() -> {
-            Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
-            List<ServiceItem> allInstalled = A11yManager.getInstalledServices(this, monitored);
-            List<ServiceItem> onlySelected = new ArrayList<>();
+            try {
+                Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
+                List<ServiceItem> allInstalled = A11yManager.getInstalledServices(this, monitored);
+                List<ServiceItem> onlySelected = new ArrayList<>();
 
-            for (ServiceItem item : allInstalled) {
-                if (item.isMonitored()) {
-                    onlySelected.add(item);
+                if (allInstalled != null) {
+                    for (ServiceItem item : allInstalled) {
+                        if (item != null && item.isMonitored()) {
+                            onlySelected.add(item);
+                        }
+                    }
                 }
+
+                runOnUiThread(() -> {
+                    try {
+                        if (tvSelectedAppsCount != null) {
+                            tvSelectedAppsCount.setText("APLICATIVOS PROTEGIDOS (" + onlySelected.size() + ")");
+                        }
+                        if (onlySelected.isEmpty()) {
+                            if (tvEmptySelectedApps != null) tvEmptySelectedApps.setVisibility(View.VISIBLE);
+                            if (recyclerSelectedApps != null) recyclerSelectedApps.setVisibility(View.GONE);
+                        } else {
+                            if (tvEmptySelectedApps != null) tvEmptySelectedApps.setVisibility(View.GONE);
+                            if (recyclerSelectedApps != null) {
+                                recyclerSelectedApps.setVisibility(View.VISIBLE);
+                                if (selectedAppsAdapter != null) {
+                                    selectedAppsAdapter.setData(onlySelected);
+                                }
+                            }
+                        }
+                        updateMasterToggleUi();
+                    } catch (Throwable t) {
+                        android.util.Log.e("MainActivity", "Erro ao atualizar UI dos apps", t);
+                    }
+                });
+            } catch (Throwable t) {
+                android.util.Log.e("MainActivity", "Erro ao carregar apps na thread de fundo", t);
             }
-
-            runOnUiThread(() -> {
-                tvSelectedAppsCount.setText("APLICATIVOS PROTEGIDOS (" + onlySelected.size() + ")");
-                if (onlySelected.isEmpty()) {
-                    tvEmptySelectedApps.setVisibility(View.VISIBLE);
-                    recyclerSelectedApps.setVisibility(View.GONE);
-                } else {
-                    tvEmptySelectedApps.setVisibility(View.GONE);
-                    recyclerSelectedApps.setVisibility(View.VISIBLE);
-                    selectedAppsAdapter.setData(onlySelected);
-                }
-                updateMasterToggleUi();
-            });
         }).start();
     }
 
@@ -428,20 +484,30 @@ public class MainActivity extends AppCompatActivity {
 
         recycler.setLayoutManager(new LinearLayoutManager(this));
         ServiceListAdapter dialogAdapter = new ServiceListAdapter(this, (item, isMonitored) -> {
-            if (isMonitored) {
-                PreferencesHelper.addMonitoredService(this, item.getId());
-                LogManager.log(this, "Adicionado: " + item.getAppName());
-            } else {
-                PreferencesHelper.removeMonitoredService(this, item.getId());
-                LogManager.log(this, "Removido: " + item.getAppName());
+            if (item != null) {
+                if (isMonitored) {
+                    PreferencesHelper.addMonitoredService(this, item.getId());
+                    LogManager.log(this, "Adicionado: " + item.getAppName());
+                } else {
+                    PreferencesHelper.removeMonitoredService(this, item.getId());
+                    LogManager.log(this, "Removido: " + item.getAppName());
+                }
             }
         });
         recycler.setAdapter(dialogAdapter);
 
         new Thread(() -> {
-            Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
-            List<ServiceItem> list = A11yManager.getInstalledServices(this, monitored);
-            runOnUiThread(() -> dialogAdapter.setData(list));
+            try {
+                Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
+                List<ServiceItem> list = A11yManager.getInstalledServices(this, monitored);
+                runOnUiThread(() -> {
+                    try {
+                        dialogAdapter.setData(list);
+                    } catch (Throwable ignored) {}
+                });
+            } catch (Throwable t) {
+                android.util.Log.e("MainActivity", "Erro ao carregar diálogo de apps", t);
+            }
         }).start();
 
         etSearch.addTextChangedListener(new TextWatcher() {
