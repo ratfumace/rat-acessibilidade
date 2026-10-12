@@ -303,7 +303,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="LIGAR TODAS"
+                                    android:text="LIGAR TODOS"
                                     android:textColor="#00FF66"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
@@ -311,7 +311,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Ativa todo o celular"
+                                    android:text="Apps da sua lista"
                                     android:textColor="#8E8E93"
                                     android:textSize="10sp" />
 
@@ -352,7 +352,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="DESLIGAR TODAS"
+                                    android:text="DESLIGAR TODOS"
                                     android:textColor="#FF453A"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
@@ -360,7 +360,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Desativa em lote"
+                                    android:text="Apps da sua lista"
                                     android:textColor="#8E8E93"
                                     android:textSize="10sp" />
 
@@ -370,108 +370,50 @@
 
                     </LinearLayout>
 
-                    <!-- LINHA 2: RELIGAR MARCADOS / REINICIAR (1s) -->
+                    <!-- LINHA 2: REINICIAR SERVIÇOS (1s) -->
                     <LinearLayout
+                        android:id="@+id/btn_action_cycle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:background="@drawable/bg_btn_action_dark"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔄"
+                            android:textSize="18sp" />
 
                         <LinearLayout
-                            android:id="@+id/btn_action_reactivate"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginEnd="5dp"
+                            android:layout_marginStart="10dp"
                             android:layout_weight="1"
-                            android:background="@drawable/bg_btn_action_dark"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:foreground="?android:attr/selectableItemBackground"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingStart="12dp"
-                            android:paddingTop="12dp"
-                            android:paddingEnd="10dp"
-                            android:paddingBottom="12dp">
+                            android:orientation="vertical">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⚡"
-                                android:textSize="18sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="RELIGAR APPS"
-                                    android:textColor="#00FF66"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Só da sua lista"
-                                    android:textColor="#8E8E93"
-                                    android:textSize="10sp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/btn_action_cycle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="5dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/bg_btn_action_dark"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:foreground="?android:attr/selectableItemBackground"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingStart="12dp"
-                            android:paddingTop="12dp"
-                            android:paddingEnd="10dp"
-                            android:paddingBottom="12dp">
+                                android:text="REINICIAR SERVIÇOS (1s)"
+                                android:textColor="#0A84FF"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="🔄"
-                                android:textSize="18sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="REINICIAR (1s)"
-                                    android:textColor="#0A84FF"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Destravar serviços"
-                                    android:textColor="#8E8E93"
-                                    android:textSize="10sp" />
-
-                            </LinearLayout>
+                                android:text="Pausa 1s e religa os apps da sua lista para destravar conexões"
+                                android:textColor="#8E8E93"
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -1284,6 +1226,22 @@
                     android:paddingBottom="0dp"
                     android:text="COPIAR"
                     android:textColor="#00FF66"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_logs_share_zip"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    android:text="ENVIAR ZIP"
+                    android:textColor="#0A84FF"
                     android:textSize="11sp" />
 
                 <com.google.android.material.button.MaterialButton

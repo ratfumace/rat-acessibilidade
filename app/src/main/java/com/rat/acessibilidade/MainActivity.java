@@ -83,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout btnOpenAppPicker;
 
     // 6. Ações Gerais
-    private LinearLayout btnActionReactivate;
     private LinearLayout btnActionCycle;
     private LinearLayout btnActionEnableAll;
     private LinearLayout btnActionDisableAll;
@@ -103,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
     // 9. Histórico (Logs)
     private TextView tvLogsConsole;
     private MaterialButton btnLogsCopy;
+    private MaterialButton btnLogsShareZip;
     private MaterialButton btnLogsClear;
 
     private final int[] INTERVAL_VALUES = {10, 30, 60, 300, 900, 3600};
@@ -221,7 +221,6 @@ public class MainActivity extends AppCompatActivity {
         btnOpenAppPicker = findViewById(R.id.btn_open_app_picker);
 
         // Actions
-        btnActionReactivate = findViewById(R.id.btn_action_reactivate);
         btnActionCycle = findViewById(R.id.btn_action_cycle);
         btnActionEnableAll = findViewById(R.id.btn_action_enable_all);
         btnActionDisableAll = findViewById(R.id.btn_action_disable_all);
@@ -242,6 +241,7 @@ public class MainActivity extends AppCompatActivity {
         tvLogsConsole = findViewById(R.id.tv_logs_console);
         tvLogsConsole.setMovementMethod(new ScrollingMovementMethod());
         btnLogsCopy = findViewById(R.id.btn_logs_copy);
+        btnLogsShareZip = findViewById(R.id.btn_logs_share_zip);
         btnLogsClear = findViewById(R.id.btn_logs_clear);
 
         btnRefresh.setOnClickListener(v -> {
@@ -534,26 +534,68 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupActionButtons() {
-        btnActionReactivate.setOnClickListener(v -> {
+        // 1. LIGAR TODOS (APENAS APPS DA SUA LISTA DE PROTEGIDOS)
+        btnActionEnableAll.setOnClickListener(v -> {
             Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
             if (monitored.isEmpty()) {
-                Toast.makeText(this, "Toque em 'ESCOLHER APLICATIVOS' primeiro!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Toque em 'ESCOLHER APLICATIVOS' para marcar seus apps!", Toast.LENGTH_LONG).show();
+                openAppPickerDialog();
                 return;
             }
+            Toast.makeText(this, "Ligando aplicativos da sua lista...", Toast.LENGTH_SHORT).show();
             new Thread(() -> {
                 boolean ok = A11yManager.enableServices(this, monitored);
                 runOnUiThread(() -> {
                     if (ok) {
-                        Toast.makeText(this, "⚡ Aplicativos selecionados reativados!", Toast.LENGTH_SHORT).show();
-                        LogManager.log(this, "⚡ Reativação manual concluída (" + monitored.size() + " apps).");
+                        Toast.makeText(this, "🟢 Todos os apps da sua lista foram LIGADOS! (" + monitored.size() + " apps)", Toast.LENGTH_LONG).show();
+                        LogManager.log(this, "🟢 Todos os apps protegidos da lista foram ligados (" + monitored.size() + " apps).");
                         loadSelectedAppsOnly();
                     } else {
-                        Toast.makeText(this, "⚠️ Permissão WRITE_SECURE_SETTINGS ausente!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "⚠️ Conceda a permissão ADB primeiro!", Toast.LENGTH_LONG).show();
                     }
                 });
             }).start();
         });
 
+        // 2. DESLIGAR TODOS (APENAS APPS DA SUA LISTA)
+        btnActionDisableAll.setOnClickListener(v -> {
+            Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
+            if (monitored.isEmpty()) {
+                Toast.makeText(this, "Nenhum aplicativo protegido na lista.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, "Desligando aplicativos da sua lista...", Toast.LENGTH_SHORT).show();
+            new Thread(() -> {
+                boolean ok = A11yManager.disableServices(this, monitored);
+                runOnUiThread(() -> {
+                    if (ok) {
+                        Toast.makeText(this, "⛔ Apps da sua lista foram DESLIGADOS!", Toast.LENGTH_LONG).show();
+                        LogManager.log(this, "⛔ Todos os apps da sua lista foram desligados.");
+                        loadSelectedAppsOnly();
+                    } else {
+                        Toast.makeText(this, "⚠️ Conceda a permissão ADB primeiro!", Toast.LENGTH_LONG).show();
+                    }
+                });
+            }).start();
+        });
+
+        // Clique longo em DESLIGAR TODOS: Desativa geral (emergência)
+        btnActionDisableAll.setOnLongClickListener(v -> {
+            Toast.makeText(this, "⛔ Desligando absolutamente tudo do sistema...", Toast.LENGTH_SHORT).show();
+            new Thread(() -> {
+                boolean ok = A11yManager.disableAllServices(this);
+                runOnUiThread(() -> {
+                    if (ok) {
+                        Toast.makeText(this, "⛔ Todos os serviços de acessibilidade foram desligados!", Toast.LENGTH_LONG).show();
+                        LogManager.log(this, "⛔ Desativação geral executada.");
+                        loadSelectedAppsOnly();
+                    }
+                });
+            }).start();
+            return true;
+        });
+
+        // 3. REINICIAR SERVIÇOS (1s) (Destrava conexões congeladas dos apps da lista)
         btnActionCycle.setOnClickListener(v -> {
             Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
             if (monitored.isEmpty()) {
@@ -565,42 +607,8 @@ public class MainActivity extends AppCompatActivity {
                 A11yManager.cycleRestartServices(this, monitored, 1000);
                 runOnUiThread(() -> {
                     Toast.makeText(this, "✅ Conexões destravadas!", Toast.LENGTH_SHORT).show();
-                    LogManager.log(this, "🔄 Ciclo de destravamento de 1s concluído.");
+                    LogManager.log(this, "🔄 Ciclo de destravamento de 1s concluído (" + monitored.size() + " apps).");
                     loadSelectedAppsOnly();
-                });
-            }).start();
-        });
-
-        // LIGAR TODAS AS ACESSIBILIDADES DO CELULAR
-        btnActionEnableAll.setOnClickListener(v -> {
-            Toast.makeText(this, "Ligando todas as acessibilidades...", Toast.LENGTH_SHORT).show();
-            new Thread(() -> {
-                boolean ok = A11yManager.enableAllInstalledServices(this);
-                runOnUiThread(() -> {
-                    if (ok) {
-                        Toast.makeText(this, "🟢 Todas as acessibilidades do celular foram LIGADAS!", Toast.LENGTH_LONG).show();
-                        LogManager.log(this, "🟢 Todas as acessibilidades do celular ligadas com sucesso.");
-                        loadSelectedAppsOnly();
-                    } else {
-                        Toast.makeText(this, "⚠️ Conceda a permissão ADB primeiro!", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }).start();
-        });
-
-        // DESLIGAR TODAS AS ACESSIBILIDADES DO CELULAR
-        btnActionDisableAll.setOnClickListener(v -> {
-            Toast.makeText(this, "Desligando todas as acessibilidades...", Toast.LENGTH_SHORT).show();
-            new Thread(() -> {
-                boolean ok = A11yManager.disableAllServices(this);
-                runOnUiThread(() -> {
-                    if (ok) {
-                        Toast.makeText(this, "⛔ Todas as acessibilidades foram DESLIGADAS!", Toast.LENGTH_LONG).show();
-                        LogManager.log(this, "⛔ Todas as acessibilidades do celular foram desligadas.");
-                        loadSelectedAppsOnly();
-                    } else {
-                        Toast.makeText(this, "⚠️ Conceda a permissão ADB primeiro!", Toast.LENGTH_LONG).show();
-                    }
                 });
             }).start();
         });
@@ -721,6 +729,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupHistorySection() {
         btnLogsCopy.setOnClickListener(v -> copyToClipboard(LogManager.getFormattedLogs(), "Histórico copiado!"));
+        if (btnLogsShareZip != null) {
+            btnLogsShareZip.setOnClickListener(v -> {
+                String currentLogs = tvLogsConsole != null ? tvLogsConsole.getText().toString() : "";
+                DiagnosticManager.shareDiagnosticZip(this, currentLogs);
+            });
+        }
         btnLogsClear.setOnClickListener(v -> {
             LogManager.clear(this);
             Toast.makeText(this, "Histórico limpo", Toast.LENGTH_SHORT).show();

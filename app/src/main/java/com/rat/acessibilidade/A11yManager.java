@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class A11yManager {
@@ -174,6 +175,99 @@ public class A11yManager {
         }
     }
 
+    /**
+     * Verifica se um serviço é um leitor de tela (TalkBack) ou serviço crítico de sistema (ex: Menu Assistente flutuante)
+     * que NUNCA deve ser ativado em lote, prevenindo desespero e travamento de interface do usuário.
+     */
+    public static boolean isDangerousSystemService(AccessibilityServiceInfo info, String serviceId) {
+        if (serviceId != null) {
+            String lower = serviceId.toLowerCase(Locale.ROOT);
+            if (lower.contains("talkback")
+                    || lower.contains("switchaccess")
+                    || lower.contains("voiceaccess")
+                    || lower.contains("selecttospeak")
+                    || lower.contains("accessibilitymenu")
+                    || lower.contains("assistantmenu")
+                    || lower.contains("assistant_menu")
+                    || lower.contains("samsung.accessibility")
+                    || lower.contains("screenmirroring")
+                    || lower.contains("screen_mirroring")
+                    || lower.contains("soundamplifier")
+                    || lower.contains("screenreader")
+                    || lower.contains("screen_reader")
+                    || lower.contains("marvin")
+                    || lower.contains("braille")
+                    || lower.contains("magnification")
+                    || lower.contains("smartswitch")
+                    || lower.contains("accessibility.scribe")
+                    || lower.contains("voiceassistant")
+                    || lower.contains("voice_assistant")) {
+                return true;
+            }
+        }
+        if (info != null) {
+            // Se possui feedback falado (spoken feedback), trata-se de um leitor de tela (ex: TalkBack)
+            if ((info.feedbackType & AccessibilityServiceInfo.FEEDBACK_SPOKEN) != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static synchronized boolean disableServices(Context context, Collection<String> targetIds) {
+        if (!hasWriteSecureSettings(context) || targetIds == null || targetIds.isEmpty()) return false;
+        try {
+            ContentResolver resolver = context.getContentResolver();
+            String raw = Settings.Secure.getString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (raw == null || raw.trim().isEmpty()) return true;
+
+            LinkedHashSet<String> activeSet = new LinkedHashSet<>();
+            for (String p : raw.split(":")) {
+                String t = p.trim();
+                if (!t.isEmpty()) activeSet.add(t);
+            }
+
+            boolean changed = false;
+            for (String target : targetIds) {
+                if (target != null && activeSet.remove(target.trim())) {
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                String newString = TextUtils.join(":", activeSet);
+                Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, newString);
+                Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, activeSet.isEmpty() ? 0 : 1);
+            }
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "Erro ao desativar serviços selecionados", t);
+            return false;
+        }
+    }
+
+    public static synchronized boolean keepOnlyMonitoredServices(Context context, Collection<String> monitoredIds) {
+        if (!hasWriteSecureSettings(context)) return false;
+        try {
+            ContentResolver resolver = context.getContentResolver();
+            LinkedHashSet<String> newActive = new LinkedHashSet<>();
+            if (monitoredIds != null) {
+                for (String id : monitoredIds) {
+                    if (id != null && !id.trim().isEmpty()) {
+                        newActive.add(id.trim());
+                    }
+                }
+            }
+            String newString = TextUtils.join(":", newActive);
+            Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, newString);
+            Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, newActive.isEmpty() ? 0 : 1);
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "Erro ao manter apenas serviços monitorados", t);
+            return false;
+        }
+    }
+
     public static synchronized boolean enableAllInstalledServices(Context context) {
         if (!hasWriteSecureSettings(context)) return false;
 
@@ -184,16 +278,57 @@ public class A11yManager {
             List<AccessibilityServiceInfo> installed = am.getInstalledAccessibilityServiceList();
             if (installed == null || installed.isEmpty()) return false;
 
-            Set<String> allIds = new HashSet<>();
+            Set<String> safeIds = new HashSet<>();
             for (AccessibilityServiceInfo info : installed) {
                 if (info != null && info.getId() != null) {
-                    allIds.add(info.getId());
+                    String id = info.getId();
+                    if (isDangerousSystemService(info, id)) {
+                        Log.w(TAG, "🛡️ Ignorando serviço perigoso/TalkBack por segurança: " + id);
+                        continue;
+                    }
+                    safeIds.add(id);
                 }
             }
 
-            return enableServices(context, allIds);
+            return enableServices(context, safeIds);
         } catch (Throwable t) {
             Log.e(TAG, "Erro ao ligar todas as acessibilidades", t);
+            return false;
+        }
+    }
+
+    /**
+     * Desativa especificamente leitores de tela como TalkBack caso tenham sido ativados acidentalmente.
+     */
+    public static synchronized boolean disableTalkBackAndScreenReaders(Context context) {
+        if (!hasWriteSecureSettings(context)) return false;
+        try {
+            ContentResolver resolver = context.getContentResolver();
+            String raw = Settings.Secure.getString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (raw == null || raw.trim().isEmpty()) return true;
+
+            LinkedHashSet<String> safeActive = new LinkedHashSet<>();
+            boolean removedAny = false;
+            for (String p : raw.split(":")) {
+                String t = p.trim();
+                if (!t.isEmpty()) {
+                    if (isDangerousSystemService(null, t)) {
+                        removedAny = true;
+                        Log.i(TAG, "Removendo serviço de acessibilidade de leitor de tela: " + t);
+                    } else {
+                        safeActive.add(t);
+                    }
+                }
+            }
+
+            if (removedAny) {
+                String newString = TextUtils.join(":", safeActive);
+                Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, newString);
+                Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, safeActive.isEmpty() ? 0 : 1);
+            }
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "Erro ao desativar TalkBack", t);
             return false;
         }
     }
