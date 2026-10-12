@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_carbon"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- CABEÇALHO -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.04"
+        android:text="ESCOLHER APLICATIVOS"
+        android:textColor="#00FF66"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:text="Marque a chave 'MONITORAR' nos aplicativos que você deseja manter ativos 24/7."
+        android:textColor="#8E8E93"
+        android:textSize="12sp" />
+
+    <!-- BUSCA -->
+    <EditText
+        android:id="@+id/et_dialog_search"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input_field"
+        android:hint="🔍 Pesquisar por nome ou pacote..."
+        android:textColor="#F5F5F7"
+        android:textColorHint="#8E8E93"
+        android:textSize="13sp"
+        android:inputType="text"
+        android:maxLines="1" />
+
+    <!-- LISTA DE APPS -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_dialog_apps"
+        android:layout_width="match_parent"
+        android:layout_height="340dp"
+        android:layout_marginTop="10dp" />
+
+    <!-- BOTÃO CONCLUIR -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_dialog_save"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="14dp"
+        android:backgroundTint="@color/neon_green"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:minHeight="0dp"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp"
+        android:text="CONCLUIR E SALVAR"
+        android:textColor="#09090B"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:cornerRadius="12dp" />
+</LinearLayout>

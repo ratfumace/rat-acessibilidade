@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#09090B</color>
+    <color name="surface">#141416</color>
+    <color name="card">#1C1C1E</color>
+    <color name="card_elevated">#252528</color>
+    <color name="card_border">#2C2C2E</color>
+    <color name="text_primary">#F5F5F7</color>
+    <color name="text_secondary">#AEAEC2</color>
+    <color name="text_dim">#8E8E93</color>
+    <color name="neon_green">#00FF66</color>
+    <color name="neon_green_dim">#1A00FF66</color>
+    <color name="crimson_red">#FF453A</color>
+    <color name="crimson_red_dim">#26FF453A</color>
+    <color name="warning_yellow">#FF9E0A</color>
+    <color name="warning_yellow_dim">#26FF9E0A</color>
+    <color name="accent_blue">#0A84FF</color>
+    <color name="accent_blue_dim">#260A84FF</color>
+    <color name="white">#FFFFFF</color>
+    <color name="divider">#222226</color>
+</resources>

@@ -1,0 +1,80 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.rat.acessibilidade'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.rat.acessibilidade"
+        minSdk 24
+        targetSdk 33
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            def ksFile = System.getenv("KEYSTORE_FILE") ?: "release.jks"
+            def ksPass = System.getenv("KEYSTORE_PASSWORD") ?: "ratacessibilidade"
+            def kAlias = System.getenv("KEY_ALIAS") ?: "ratacessibilidade"
+            def kPass = System.getenv("KEY_PASSWORD") ?: "ratacessibilidade"
+
+            if (file(ksFile).exists()) {
+                storeFile file(ksFile)
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+                v1SigningEnabled = true
+                v2SigningEnabled = true
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signingConfigs.release.storeFile != null && signingConfigs.release.storeFile.exists()) {
+                signingConfig = signingConfigs.release
+            }
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+}
+
+tasks.register('copyApkToDir') {
+    doLast {
+        def targetDir = file("${project.rootDir}")
+        def releaseApk = file("${buildDir}/outputs/apk/release/app-release.apk")
+        def debugApk = file("${buildDir}/outputs/apk/debug/app-debug.apk")
+        def targetApk = releaseApk.exists() ? releaseApk : (debugApk.exists() ? debugApk : null)
+
+        if (targetApk != null) {
+            copy {
+                from targetApk
+                into targetDir
+                rename { String fileName -> "RatAcessibilidade.apk" }
+            }
+            println "✅ APK copiado para: ${targetDir}/RatAcessibilidade.apk"
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith("assemble") }.configureEach {
+    finalizedBy copyApkToDir
+}

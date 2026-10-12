@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rat Acessibilidade</string>
+    <string name="service_name">Guardião de Acessibilidade</string>
+    <string name="notification_channel_name">Vigia de Acessibilidade</string>
+    <string name="notification_channel_desc">Notificação contínua do monitor de acessibilidade</string>
+</resources>
