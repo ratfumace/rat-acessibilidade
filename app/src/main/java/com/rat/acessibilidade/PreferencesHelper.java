@@ -16,6 +16,7 @@ public class PreferencesHelper {
     private static final String KEY_DAILY_CYCLE_ENABLED = "daily_cycle_enabled";
     private static final String KEY_DAILY_CYCLE_HOUR = "daily_cycle_hour";
     private static final String KEY_DAILY_CYCLE_MINUTE = "daily_cycle_minute";
+    private static final String KEY_SHOW_NOTIFICATION = "show_notification";
 
     private static SharedPreferences getPrefs(Context context) {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
@@ -107,5 +108,13 @@ public class PreferencesHelper {
 
     public static void setFirstRunDone(Context context) {
         getPrefs(context).edit().putBoolean("first_run", false).apply();
+    }
+
+    public static boolean isShowNotification(Context context) {
+        return getPrefs(context).getBoolean(KEY_SHOW_NOTIFICATION, true);
+    }
+
+    public static void setShowNotification(Context context, boolean show) {
+        getPrefs(context).edit().putBoolean(KEY_SHOW_NOTIFICATION, show).apply();
     }
 }

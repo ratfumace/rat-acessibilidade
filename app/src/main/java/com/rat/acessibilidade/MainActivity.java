@@ -1,6 +1,8 @@
 package com.rat.acessibilidade;
 
 import android.app.Dialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.TimePickerDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -31,11 +33,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.ArrayList;
@@ -74,6 +78,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvIconBattery;
     private MaterialButton btnFixBattery;
     private SwitchMaterial switchBoot;
+    private TextView tvIconNotification;
+    private TextView tvNotificationSubtitle;
+    private MaterialButton btnNotificationSettings;
+    private SwitchMaterial switchNotification;
 
     // 5. Aplicativos Protegidos (Dashboard)
     private TextView tvSelectedAppsCount;
@@ -172,6 +180,11 @@ public class MainActivity extends AppCompatActivity {
             android.util.Log.e("MainActivity", "Erro em updatePermissionStatus", t);
         }
         try {
+            updateNotificationUi();
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Erro em updateNotificationUi", t);
+        }
+        try {
             updateMasterToggleUi();
         } catch (Throwable t) {
             android.util.Log.e("MainActivity", "Erro em updateMasterToggleUi", t);
@@ -213,6 +226,10 @@ public class MainActivity extends AppCompatActivity {
         tvIconBattery = findViewById(R.id.tv_icon_battery);
         btnFixBattery = findViewById(R.id.btn_fix_battery);
         switchBoot = findViewById(R.id.switch_boot);
+        tvIconNotification = findViewById(R.id.tv_icon_notification);
+        tvNotificationSubtitle = findViewById(R.id.tv_notification_subtitle);
+        btnNotificationSettings = findViewById(R.id.btn_notification_settings);
+        switchNotification = findViewById(R.id.switch_notification);
 
         // Apps Dashboard
         tvSelectedAppsCount = findViewById(R.id.tv_selected_apps_count);
@@ -365,6 +382,129 @@ public class MainActivity extends AppCompatActivity {
 
         switchBoot.setChecked(PreferencesHelper.isStartOnBoot(this));
         switchBoot.setOnCheckedChangeListener((buttonView, isChecked) -> PreferencesHelper.setStartOnBoot(this, isChecked));
+
+        setupNotificationSection();
+    }
+
+    private void setupNotificationSection() {
+        if (switchNotification == null || btnNotificationSettings == null) return;
+
+        updateNotificationUi();
+
+        switchNotification.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (!buttonView.isPressed()) return; // Ignora alterações programáticas
+
+            if (isChecked) {
+                if (!areNotificationsEffectivelyEnabled(this)) {
+                    showEnableNotificationDialog();
+                    switchNotification.setChecked(false);
+                    return;
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 101);
+                    }
+                }
+                PreferencesHelper.setShowNotification(this, true);
+                updateNotificationUi();
+                notifyServiceReload();
+                Toast.makeText(this, "Notificação ativada na barra", Toast.LENGTH_SHORT).show();
+            } else {
+                PreferencesHelper.setShowNotification(this, false);
+                updateNotificationUi();
+                notifyServiceReload();
+                showHideNotificationInfoDialog();
+            }
+        });
+
+        btnNotificationSettings.setOnClickListener(v -> openNotificationSettings());
+    }
+
+    private void updateNotificationUi() {
+        if (switchNotification == null || tvNotificationSubtitle == null || tvIconNotification == null || btnNotificationSettings == null) {
+            return;
+        }
+
+        boolean systemEnabled = areNotificationsEffectivelyEnabled(this);
+        boolean prefShow = PreferencesHelper.isShowNotification(this);
+
+        if (!systemEnabled) {
+            switchNotification.setChecked(false);
+            tvIconNotification.setText("🔕");
+            tvNotificationSubtitle.setText("Desativada no sistema Android (Guardião ativo 24/7)");
+            btnNotificationSettings.setText("⚙️ Notificações Desativadas no Sistema (OK)");
+            btnNotificationSettings.setTextColor(ContextCompat.getColor(this, R.color.neon_green));
+        } else if (!prefShow) {
+            switchNotification.setChecked(false);
+            tvIconNotification.setText("🔕");
+            tvNotificationSubtitle.setText("Oculta da barra (Guardião segue ativo 24/7)");
+            btnNotificationSettings.setText("⚙️ Ocultar 100% no Sistema Android");
+            btnNotificationSettings.setTextColor(ContextCompat.getColor(this, R.color.warning_yellow));
+        } else {
+            switchNotification.setChecked(true);
+            tvIconNotification.setText("🔔");
+            tvNotificationSubtitle.setText("Exibe o status do guardião na barra");
+            btnNotificationSettings.setText("⚙️ Ocultar / Gerenciar no Sistema Android");
+            btnNotificationSettings.setTextColor(ContextCompat.getColor(this, R.color.accent_blue));
+        }
+    }
+
+    private boolean areNotificationsEffectivelyEnabled(Context context) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                NotificationChannel normalChannel = nm.getNotificationChannel(A11yWatchdogService.CHANNEL_ID);
+                NotificationChannel silentChannel = nm.getNotificationChannel(A11yWatchdogService.CHANNEL_SILENT_ID);
+                if (normalChannel != null && normalChannel.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+                    if (silentChannel == null || silentChannel.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private void openNotificationSettings() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                startActivity(intent);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (Exception ignored) {}
+    }
+
+    private void showHideNotificationInfoDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🔕 Notificação Minimizada")
+                .setMessage("O ícone do Guardião foi removido da barra de status superior.\n\n"
+                        + "💡 Caso queira ocultá-la 100% (inclusive da lista quando puxa a barra para baixo), você pode desativar as notificações deste app no Android.\n\n"
+                        + "O Guardião continuará funcionando e protegendo seus apps normalmente 24 horas por dia!")
+                .setPositiveButton("Ocultar no Sistema", (dialog, which) -> openNotificationSettings())
+                .setNegativeButton("OK, Entendi", null)
+                .show();
+    }
+
+    private void showEnableNotificationDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🔔 Notificações Desativadas")
+                .setMessage("As notificações do Rat Acessibilidade estão desativadas nas configurações do celular.\n\n"
+                        + "Para exibi-la novamente na barra de status, ative as notificações nas configurações do sistema.")
+                .setPositiveButton("Abrir Configurações", (dialog, which) -> openNotificationSettings())
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void updatePermissionStatus() {

@@ -28,8 +28,9 @@ public class A11yWatchdogService extends Service {
     public static final String ACTION_CYCLE = "com.rat.acessibilidade.ACTION_CYCLE";
     public static final String ACTION_RELOAD = "com.rat.acessibilidade.ACTION_RELOAD";
 
-    private static final String CHANNEL_ID = "rat_a11y_watchdog_channel";
-    private static final int NOTIFICATION_ID = 9988;
+    public static final String CHANNEL_ID = "rat_a11y_watchdog_channel";
+    public static final String CHANNEL_SILENT_ID = "rat_a11y_watchdog_channel_silent";
+    public static final int NOTIFICATION_ID = 9988;
 
     private static boolean isRunning = false;
 
@@ -91,6 +92,9 @@ public class A11yWatchdogService extends Service {
         } else if (ACTION_CYCLE.equals(action)) {
             workerHandler.post(this::performCycle);
         } else if (ACTION_RELOAD.equals(action)) {
+            try {
+                startForeground(NOTIFICATION_ID, buildNotification("Guardião ativo"));
+            } catch (Throwable ignored) {}
             workerHandler.removeCallbacks(checkRunnable);
             workerHandler.post(checkRunnable);
         } else {
@@ -198,21 +202,36 @@ public class A11yWatchdogService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Vigia de Acessibilidade",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription("Mantém serviços de acessibilidade sempre ligados");
-            channel.setShowBadge(false);
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) {
+                // Canal normal (ícone visível na barra de status)
+                NotificationChannel channel = new NotificationChannel(
+                        CHANNEL_ID,
+                        "Vigia de Acessibilidade (Normal)",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                channel.setDescription("Exibe o status do monitoramento na barra de status");
+                channel.setShowBadge(false);
                 nm.createNotificationChannel(channel);
+
+                // Canal silencioso / discreto (sem ícone na barra de status)
+                NotificationChannel silentChannel = new NotificationChannel(
+                        CHANNEL_SILENT_ID,
+                        "Vigia de Acessibilidade (Silencioso/Oculto)",
+                        NotificationManager.IMPORTANCE_MIN
+                );
+                silentChannel.setDescription("Monitoramento em segundo plano sem ícone na barra");
+                silentChannel.setShowBadge(false);
+                nm.createNotificationChannel(silentChannel);
             }
         }
     }
 
     private Notification buildNotification(String text) {
+        boolean showNotif = PreferencesHelper.isShowNotification(this);
+        String channelId = showNotif ? CHANNEL_ID : CHANNEL_SILENT_ID;
+        int priority = showNotif ? NotificationCompat.PRIORITY_LOW : NotificationCompat.PRIORITY_MIN;
+
         Intent notifyIntent = new Intent(this, MainActivity.class);
         notifyIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -220,22 +239,25 @@ public class A11yWatchdogService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 
-        Intent reactivateIntent = new Intent(this, A11yWatchdogService.class);
-        reactivateIntent.setAction(ACTION_REACTIVATE_NOW);
-        PendingIntent reactivatePending = PendingIntent.getService(
-                this, 1, reactivateIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setContentTitle("Rat Acessibilidade")
                 .setContentText(text)
                 .setSmallIcon(R.drawable.ic_stat_watchdog)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
-                .addAction(android.R.drawable.ic_media_play, "⚡ Reativar", reactivatePending)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .build();
+                .setPriority(priority);
+
+        if (showNotif) {
+            Intent reactivateIntent = new Intent(this, A11yWatchdogService.class);
+            reactivateIntent.setAction(ACTION_REACTIVATE_NOW);
+            PendingIntent reactivatePending = PendingIntent.getService(
+                    this, 1, reactivateIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+            );
+            builder.addAction(android.R.drawable.ic_media_play, "⚡ Reativar", reactivatePending);
+        }
+
+        return builder.build();
     }
 
     private void updateNotification(String text) {

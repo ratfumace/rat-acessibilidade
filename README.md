@@ -42,6 +42,10 @@ Este aplicativo foi desenvolvido para ser totalmente auditável por qualquer des
    - Intervalo configurável: *10s, 30s, 1m, 5m, 15m, 1 hora*.
    - Horário fixo com alarme integrado ao kernel (`AlarmManager` com `RTC_WAKEUP`): acorda o aparelho de madrugada (ex: **⏰ 05:00**) e renova todas as conexões travadas.
 
+6. **🔕 Modo Discreto / Ocultar Notificação**:
+   - Opção para desligar a notificação fixa da barra de status (`IMPORTANCE_MIN`).
+   - Atalho direto para desativar a notificação nas configurações do sistema Android, mantendo o Guardião 100% invisível e operante 24/7.
+
 ---
 
 ## 💻 Permissão Necessária via Computador (ADB)
