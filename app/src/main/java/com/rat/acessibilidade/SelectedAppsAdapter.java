@@ -17,17 +17,18 @@ import java.util.List;
 
 public class SelectedAppsAdapter extends RecyclerView.Adapter<SelectedAppsAdapter.ViewHolder> {
 
-    public interface OnRemoveAppListener {
+    public interface OnAppActionListener {
         void onRemove(ServiceItem item);
+        void onClick(ServiceItem item);
     }
 
     private final Context context;
     private final List<ServiceItem> items = new ArrayList<>();
-    private final OnRemoveAppListener removeListener;
+    private final OnAppActionListener actionListener;
 
-    public SelectedAppsAdapter(Context context, OnRemoveAppListener removeListener) {
+    public SelectedAppsAdapter(Context context, OnAppActionListener actionListener) {
         this.context = context;
-        this.removeListener = removeListener;
+        this.actionListener = actionListener;
     }
 
     public void setData(List<ServiceItem> newItems) {
@@ -67,9 +68,15 @@ public class SelectedAppsAdapter extends RecyclerView.Adapter<SelectedAppsAdapte
             holder.txtLiveStatus.setBackgroundResource(R.drawable.bg_status_badge_red);
         }
 
+        holder.itemView.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onClick(item);
+            }
+        });
+
         holder.btnRemove.setOnClickListener(v -> {
-            if (removeListener != null) {
-                removeListener.onRemove(item);
+            if (actionListener != null) {
+                actionListener.onRemove(item);
             }
         });
     }

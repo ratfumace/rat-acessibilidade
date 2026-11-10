@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
 
     // 8. Tutorial PC
     private MaterialButton btnTutorialCopyAdb;
+    private MaterialButton btnTutorialCopyShieldAdb;
     private LinearLayout btnTutorialVideoYoutube;
     private LinearLayout btnTutorialAiPrompt;
     private LinearLayout btnTutorialShareWhatsapp;
@@ -250,6 +251,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Tutorial
         btnTutorialCopyAdb = findViewById(R.id.btn_tutorial_copy_adb);
+        btnTutorialCopyShieldAdb = findViewById(R.id.btn_tutorial_copy_shield_adb);
         btnTutorialVideoYoutube = findViewById(R.id.btn_tutorial_video_youtube);
         btnTutorialAiPrompt = findViewById(R.id.btn_tutorial_ai_prompt);
         btnTutorialShareWhatsapp = findViewById(R.id.btn_tutorial_share_whatsapp);
@@ -552,17 +554,58 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupAppPickerSection() {
         recyclerSelectedApps.setLayoutManager(new LinearLayoutManager(this));
-        selectedAppsAdapter = new SelectedAppsAdapter(this, item -> {
-            if (item != null) {
-                PreferencesHelper.removeMonitoredService(this, item.getId());
-                LogManager.log(this, "Removido da proteção: " + item.getAppName());
-                loadSelectedAppsOnly();
-                notifyServiceReload();
+        selectedAppsAdapter = new SelectedAppsAdapter(this, new SelectedAppsAdapter.OnAppActionListener() {
+            @Override
+            public void onRemove(ServiceItem item) {
+                if (item != null) {
+                    PreferencesHelper.removeMonitoredService(MainActivity.this, item.getId());
+                    LogManager.log(MainActivity.this, "Removido da proteção: " + item.getAppName());
+                    loadSelectedAppsOnly();
+                    notifyServiceReload();
+                }
+            }
+
+            @Override
+            public void onClick(ServiceItem item) {
+                if (item != null) {
+                    showAppOptionsDialog(item);
+                }
             }
         });
         recyclerSelectedApps.setAdapter(selectedAppsAdapter);
 
         btnOpenAppPicker.setOnClickListener(v -> openAppPickerDialog());
+    }
+
+    private void showAppOptionsDialog(ServiceItem item) {
+        String[] options = {
+                "⚙️ Configurações do Sistema (Bateria / Início Automático)",
+                "📋 Copiar Comandos ADB para este App",
+                "🗑️ Remover da Lista de Proteção"
+        };
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("🛡️ " + item.getAppName())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        try {
+                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                            intent.setData(Uri.parse("package:" + item.getPackageName()));
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            Toast.makeText(this, "Não foi possível abrir as configurações", Toast.LENGTH_SHORT).show();
+                        }
+                    } else if (which == 1) {
+                        String cmd = A11yManager.generatePackageShieldAdb(item.getPackageName());
+                        copyToClipboard(cmd, "Comandos ADB para " + item.getAppName() + " copiados!");
+                    } else if (which == 2) {
+                        PreferencesHelper.removeMonitoredService(this, item.getId());
+                        LogManager.log(this, "Removido da proteção: " + item.getAppName());
+                        loadSelectedAppsOnly();
+                        notifyServiceReload();
+                    }
+                })
+                .show();
     }
 
     private void loadSelectedAppsOnly() {
@@ -822,7 +865,13 @@ public class MainActivity extends AppCompatActivity {
     private void setupTutorialSection() {
         String cmd = "adb shell pm grant " + getPackageName() + " android.permission.WRITE_SECURE_SETTINGS";
 
-        btnTutorialCopyAdb.setOnClickListener(v -> copyToClipboard(cmd, "Comando ADB copiado com sucesso!"));
+        btnTutorialCopyAdb.setOnClickListener(v -> copyToClipboard(cmd, "Comando ADB básico copiado com sucesso!"));
+
+        btnTutorialCopyShieldAdb.setOnClickListener(v -> {
+            Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
+            String script = A11yManager.generateFullShieldAdbScript(this, monitored);
+            copyToClipboard(script, "🛡️ Script de Blindagem Total copiado! Cole no CMD ou terminal do PC.");
+        });
 
         btnTutorialVideoYoutube.setOnClickListener(v -> {
             try {
@@ -835,17 +884,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnTutorialAiPrompt.setOnClickListener(v -> {
-            String prompt = "Olá! Preciso da sua ajuda para conceder a permissão WRITE_SECURE_SETTINGS para o aplicativo \"Rat Acessibilidade\" no meu celular Android.\n\n"
+            Set<String> monitored = PreferencesHelper.getMonitoredServices(this);
+            String fullScript = A11yManager.generateFullShieldAdbScript(this, monitored);
+            String prompt = "Olá! Preciso da sua ajuda para configurar o aplicativo \"Rat Acessibilidade\" e blindar meus aplicativos no meu celular Android via ADB no computador.\n\n"
                     + "Informações do aplicativo:\n"
                     + "- Nome: Rat Acessibilidade\n"
-                    + "- Pacote: " + getPackageName() + "\n"
-                    + "- Comando exato para rodar no terminal do computador:\n"
-                    + cmd + "\n\n"
+                    + "- Pacote: " + getPackageName() + "\n\n"
+                    + "Aqui está o script de comandos ADB completo para executar no computador:\n"
+                    + fullScript + "\n\n"
                     + "Por favor, me explique de forma muito simples e passo a passo:\n"
                     + "1. Me pergunte qual é o sistema operacional do meu PC (Windows, Mac ou Linux).\n"
                     + "2. Como baixar e extrair o ADB (Android Platform-Tools) no meu computador.\n"
                     + "3. Como ativar a Depuração USB no meu celular Android.\n"
-                    + "4. Como conectar o cabo USB, autorizar na tela do celular e rodar o comando acima.\n"
+                    + "4. Como conectar o cabo USB, autorizar na tela do celular e rodar os comandos acima no terminal.\n"
                     + "5. Como resolver erros comuns (como 'device unauthorized' ou 'command not found').";
 
             copyToClipboard(prompt, "🤖 Prompt para IA copiado! Cole no ChatGPT, Claude ou Gemini.");

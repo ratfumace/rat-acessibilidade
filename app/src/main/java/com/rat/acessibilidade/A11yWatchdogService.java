@@ -126,7 +126,7 @@ public class A11yWatchdogService extends Service {
             List<String> missing = new ArrayList<>();
 
             for (String target : monitored) {
-                if (!activeIds.contains(target)) {
+                if (!A11yManager.isServiceInSet(activeIds, target)) {
                     missing.add(target);
                 }
             }

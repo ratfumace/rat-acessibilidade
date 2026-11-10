@@ -27,22 +27,39 @@ public class PreferencesHelper {
         if (set == null) {
             set = new HashSet<>();
         }
-        return new HashSet<>(set);
+        Set<String> normalized = new HashSet<>();
+        for (String s : set) {
+            if (s != null && !s.trim().isEmpty()) {
+                normalized.add(A11yManager.canonicalizeId(s));
+            }
+        }
+        return normalized;
     }
 
     public static void setMonitoredServices(Context context, Set<String> services) {
-        getPrefs(context).edit().putStringSet(KEY_MONITORED_SERVICES, new HashSet<>(services)).apply();
+        Set<String> normalized = new HashSet<>();
+        if (services != null) {
+            for (String s : services) {
+                if (s != null && !s.trim().isEmpty()) {
+                    normalized.add(A11yManager.canonicalizeId(s));
+                }
+            }
+        }
+        getPrefs(context).edit().putStringSet(KEY_MONITORED_SERVICES, normalized).apply();
     }
 
     public static void addMonitoredService(Context context, String serviceId) {
+        if (serviceId == null || serviceId.trim().isEmpty()) return;
         Set<String> current = getMonitoredServices(context);
-        current.add(serviceId);
+        current.add(A11yManager.canonicalizeId(serviceId));
         setMonitoredServices(context, current);
     }
 
     public static void removeMonitoredService(Context context, String serviceId) {
+        if (serviceId == null) return;
         Set<String> current = getMonitoredServices(context);
-        current.remove(serviceId);
+        String targetCanon = A11yManager.canonicalizeId(serviceId);
+        current.removeIf(s -> A11yManager.areSameComponent(s, targetCanon));
         setMonitoredServices(context, current);
     }
 

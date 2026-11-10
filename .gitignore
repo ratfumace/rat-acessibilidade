@@ -8,3 +8,7 @@
 /captures
 .externalNativeBuild
 .cxx
+*Diagnostico*.zip
+*.zip
+__pycache__/
+*.py[cod]

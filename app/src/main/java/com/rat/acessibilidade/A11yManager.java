@@ -2,6 +2,7 @@ package com.rat.acessibilidade;
 
 import android.Manifest;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -24,6 +25,44 @@ import java.util.Set;
 public class A11yManager {
 
     private static final String TAG = "A11yManager";
+
+    public static String canonicalizeId(String id) {
+        if (id == null) return "";
+        String trimmed = id.trim();
+        if (trimmed.isEmpty()) return "";
+        ComponentName cn = ComponentName.unflattenFromString(trimmed);
+        if (cn != null) {
+            return cn.flattenToString();
+        }
+        return trimmed;
+    }
+
+    public static boolean areSameComponent(String id1, String id2) {
+        if (id1 == null || id2 == null) return false;
+        String t1 = id1.trim();
+        String t2 = id2.trim();
+        if (t1.equalsIgnoreCase(t2)) return true;
+        ComponentName cn1 = ComponentName.unflattenFromString(t1);
+        ComponentName cn2 = ComponentName.unflattenFromString(t2);
+        if (cn1 != null && cn2 != null) {
+            return cn1.equals(cn2);
+        }
+        return false;
+    }
+
+    public static boolean isServiceInSet(Set<String> set, String serviceId) {
+        if (set == null || serviceId == null || serviceId.trim().isEmpty()) return false;
+        String trimmed = serviceId.trim();
+        if (set.contains(trimmed)) return true;
+        String canon = canonicalizeId(trimmed);
+        if (set.contains(canon)) return true;
+        for (String item : set) {
+            if (areSameComponent(item, trimmed)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static boolean hasWriteSecureSettings(Context context) {
         try {
@@ -50,6 +89,7 @@ public class A11yManager {
                     String trimmed = p.trim();
                     if (!trimmed.isEmpty()) {
                         set.add(trimmed);
+                        set.add(canonicalizeId(trimmed));
                     }
                 }
             }
@@ -117,10 +157,11 @@ public class A11yManager {
                         } catch (Throwable ignored) {}
                     }
 
-                    boolean isActive = enabledSet.contains(id);
-                    boolean isMonitored = monitoredSet != null && monitoredSet.contains(id);
+                    String canonId = canonicalizeId(id);
+                    boolean isActive = isServiceInSet(enabledSet, canonId);
+                    boolean isMonitored = isServiceInSet(monitoredSet, canonId);
 
-                    result.add(new ServiceItem(id, packageName, serviceClass, appName, serviceName, icon, isActive, isMonitored));
+                    result.add(new ServiceItem(canonId, packageName, serviceClass, appName, serviceName, icon, isActive, isMonitored));
                 }
             }
 
@@ -150,14 +191,19 @@ public class A11yManager {
             if (raw != null && !raw.trim().isEmpty()) {
                 for (String p : raw.split(":")) {
                     String t = p.trim();
-                    if (!t.isEmpty()) activeSet.add(t);
+                    if (!t.isEmpty()) {
+                        activeSet.add(canonicalizeId(t));
+                    }
                 }
             }
 
             boolean changed = false;
             for (String target : targetIds) {
                 if (target != null && !target.trim().isEmpty()) {
-                    if (activeSet.add(target.trim())) {
+                    String canon = canonicalizeId(target);
+                    // Remove duplicatas em formato alternativo antes de inserir canônico
+                    activeSet.removeIf(existing -> areSameComponent(existing, canon));
+                    if (activeSet.add(canon)) {
                         changed = true;
                     }
                 }
@@ -224,13 +270,16 @@ public class A11yManager {
             LinkedHashSet<String> activeSet = new LinkedHashSet<>();
             for (String p : raw.split(":")) {
                 String t = p.trim();
-                if (!t.isEmpty()) activeSet.add(t);
+                if (!t.isEmpty()) activeSet.add(canonicalizeId(t));
             }
 
             boolean changed = false;
             for (String target : targetIds) {
-                if (target != null && activeSet.remove(target.trim())) {
-                    changed = true;
+                if (target != null) {
+                    String targetCanon = canonicalizeId(target);
+                    if (activeSet.removeIf(existing -> areSameComponent(existing, targetCanon))) {
+                        changed = true;
+                    }
                 }
             }
 
@@ -254,7 +303,7 @@ public class A11yManager {
             if (monitoredIds != null) {
                 for (String id : monitoredIds) {
                     if (id != null && !id.trim().isEmpty()) {
-                        newActive.add(id.trim());
+                        newActive.add(canonicalizeId(id));
                     }
                 }
             }
@@ -286,7 +335,7 @@ public class A11yManager {
                         Log.w(TAG, "🛡️ Ignorando serviço perigoso/TalkBack por segurança: " + id);
                         continue;
                     }
-                    safeIds.add(id);
+                    safeIds.add(canonicalizeId(id));
                 }
             }
 
@@ -316,7 +365,7 @@ public class A11yManager {
                         removedAny = true;
                         Log.i(TAG, "Removendo serviço de acessibilidade de leitor de tela: " + t);
                     } else {
-                        safeActive.add(t);
+                        safeActive.add(canonicalizeId(t));
                     }
                 }
             }
@@ -359,30 +408,36 @@ public class A11yManager {
             if (raw != null && !raw.trim().isEmpty()) {
                 for (String p : raw.split(":")) {
                     String t = p.trim();
-                    if (!t.isEmpty()) activeSet.add(t);
+                    if (!t.isEmpty()) activeSet.add(canonicalizeId(t));
                 }
             }
 
-            // ETAPA 1: Desativa os serviços selecionados
+            Set<String> canonicalTargets = new HashSet<>();
             for (String target : targetIds) {
-                if (target != null) {
-                    activeSet.remove(target.trim());
+                if (target != null && !target.trim().isEmpty()) {
+                    canonicalTargets.add(canonicalizeId(target));
                 }
+            }
+
+            // ETAPA 1: Desativa TODOS os alvos removendo todas as variações (curta e longa)
+            for (String canon : canonicalTargets) {
+                activeSet.removeIf(existing -> areSameComponent(existing, canon));
             }
 
             String disabledString = TextUtils.join(":", activeSet);
             Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, disabledString);
+            if (activeSet.isEmpty()) {
+                Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0);
+            }
 
-            // ETAPA 2: Pausa para o Android desmontar a conexão
+            // ETAPA 2: Pausa para o Android desmontar a conexão IPC/Binder
             try {
                 Thread.sleep(pauseMs);
             } catch (InterruptedException ignored) {}
 
-            // ETAPA 3: Religa todos os serviços selecionados
-            for (String target : targetIds) {
-                if (target != null && !target.trim().isEmpty()) {
-                    activeSet.add(target.trim());
-                }
+            // ETAPA 3: Religa todos os serviços selecionados na forma canônica
+            for (String canon : canonicalTargets) {
+                activeSet.add(canon);
             }
 
             String enabledString = TextUtils.join(":", activeSet);
@@ -391,5 +446,75 @@ public class A11yManager {
         } catch (Throwable t) {
             Log.e(TAG, "Erro durante cycleRestartServices", t);
         }
+    }
+
+    public static String generateFullShieldAdbScript(Context context, Collection<String> monitoredServices) {
+        String myPkg = context.getPackageName();
+        StringBuilder sb = new StringBuilder();
+        sb.append("# ═══════════════════════════════════════════════════════════════════\n");
+        sb.append("# 🛡️ SCRIPT DE BLINDAGEM TOTAL — RAT ACESSIBILIDADE & SEUS APPS\n");
+        sb.append("# Execute no computador via Prompt de Comando (CMD), PowerShell ou Terminal\n");
+        sb.append("# ═══════════════════════════════════════════════════════════════════\n\n");
+
+        sb.append("# 1. Permissão Mestre WRITE_SECURE_SETTINGS para o Rat Acessibilidade:\n");
+        sb.append("adb shell pm grant ").append(myPkg).append(" android.permission.WRITE_SECURE_SETTINGS\n\n");
+
+        sb.append("# 2. Blindagem de Segundo Plano, Bateria e Início no Boot do Guardião:\n");
+        sb.append("adb shell cmd deviceidle whitelist +").append(myPkg).append("\n");
+        sb.append("adb shell appops set ").append(myPkg).append(" RUN_IN_BACKGROUND allow\n");
+        sb.append("adb shell appops set ").append(myPkg).append(" RUN_ANY_IN_BACKGROUND allow\n");
+        sb.append("adb shell appops set ").append(myPkg).append(" AUTO_START allow\n\n");
+
+        sb.append("# 3. Desativar o Matador de Processos Fantasma do Android (Phantom Process Killer):\n");
+        sb.append("adb shell /system/bin/device_config put activity_manager max_phantom_processes 2147483647\n");
+        sb.append("adb shell /system/bin/device_config set_sync_disabled_for_tests persistent\n\n");
+
+        Set<String> packages = new LinkedHashSet<>();
+        if (monitoredServices != null) {
+            for (String id : monitoredServices) {
+                if (id != null && !id.trim().isEmpty()) {
+                    ComponentName cn = ComponentName.unflattenFromString(id.trim());
+                    if (cn != null && cn.getPackageName() != null && !cn.getPackageName().isEmpty()) {
+                        packages.add(cn.getPackageName());
+                    } else {
+                        int slash = id.indexOf('/');
+                        if (slash > 0) {
+                            packages.add(id.substring(0, slash).trim());
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!packages.isEmpty()) {
+            sb.append("# 4. Blindagem para Todos os Aplicativos na sua Lista de Proteção:\n");
+            for (String pkg : packages) {
+                if (myPkg.equals(pkg)) continue;
+                sb.append("# --- [ ").append(pkg).append(" ] ---\n");
+                sb.append("adb shell cmd deviceidle whitelist +").append(pkg).append("\n");
+                sb.append("adb shell appops set ").append(pkg).append(" RUN_IN_BACKGROUND allow\n");
+                sb.append("adb shell appops set ").append(pkg).append(" RUN_ANY_IN_BACKGROUND allow\n");
+                sb.append("adb shell appops set ").append(pkg).append(" AUTO_START allow\n");
+            }
+            sb.append("\n");
+
+            sb.append("# 5. Destravar Processos Congelados Imediatamente:\n");
+            for (String pkg : packages) {
+                if (myPkg.equals(pkg)) continue;
+                sb.append("adb shell am force-stop ").append(pkg).append("\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    public static String generatePackageShieldAdb(String packageName) {
+        if (packageName == null || packageName.trim().isEmpty()) return "";
+        String pkg = packageName.trim();
+        return "adb shell cmd deviceidle whitelist +" + pkg + "\n"
+                + "adb shell appops set " + pkg + " RUN_IN_BACKGROUND allow\n"
+                + "adb shell appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow\n"
+                + "adb shell appops set " + pkg + " AUTO_START allow\n"
+                + "adb shell am force-stop " + pkg;
     }
 }

@@ -70,11 +70,16 @@ def main():
     else:
         print("   ℹ️ Permissão aplicada.")
 
-    # 3. Notificações e Otimização de Bateria
-    print("\n[3/4] Configurando segundo plano e bateria (Doze Mode)...")
+    # 3. Notificações e Otimização de Bateria (Blindagem Total)
+    print("\n[3/4] Blindando segundo plano, bateria e início automático...")
     run_cmd(f'adb -s {target_device} shell pm grant com.rat.acessibilidade android.permission.POST_NOTIFICATIONS', check=False)
-    run_cmd(f'adb -s {target_device} shell dumpsys deviceidle whitelist +com.rat.acessibilidade', check=False)
-    print("   ✅ Notificações e Isenção de Bateria configuradas!")
+    run_cmd(f'adb -s {target_device} shell cmd deviceidle whitelist +com.rat.acessibilidade', check=False)
+    run_cmd(f'adb -s {target_device} shell appops set com.rat.acessibilidade RUN_IN_BACKGROUND allow', check=False)
+    run_cmd(f'adb -s {target_device} shell appops set com.rat.acessibilidade RUN_ANY_IN_BACKGROUND allow', check=False)
+    run_cmd(f'adb -s {target_device} shell appops set com.rat.acessibilidade AUTO_START allow', check=False)
+    run_cmd(f'adb -s {target_device} shell /system/bin/device_config put activity_manager max_phantom_processes 2147483647', check=False)
+    run_cmd(f'adb -s {target_device} shell /system/bin/device_config set_sync_disabled_for_tests persistent', check=False)
+    print("   ✅ Notificações, Doze Mode, Auto-Start e Phantom Killer blindados com sucesso!")
 
     # 4. Iniciar App
     print("\n[4/4] Abrindo Rat Acessibilidade no aparelho...")

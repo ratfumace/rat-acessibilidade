@@ -1112,11 +1112,39 @@
                         android:minHeight="0dp"
                         android:paddingTop="0dp"
                         android:paddingBottom="0dp"
-                        android:text="📋 COPIAR COMANDO ADB"
+                        android:text="📋 COPIAR COMANDO ADB BÁSICO"
                         android:textColor="#09090B"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         app:cornerRadius="10dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_tutorial_copy_shield_adb"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="#1C1C1E"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="48dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:text="🛡️ COPIAR BLINDAGEM TOTAL (XIAOMI / BATERIA / APPS)"
+                        android:textColor="#00FF66"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="#00FF66"
+                        app:strokeWidth="1dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="Gera script com Rat Acessibilidade e todos os seus apps monitorados (Doze, Auto-Start e Phantom Killer)"
+                        android:textColor="#8E8E93"
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
